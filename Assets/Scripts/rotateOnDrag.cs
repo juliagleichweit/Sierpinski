@@ -6,7 +6,7 @@ public class rotateOnDrag : MonoBehaviour
 {
     public Transform TargetLookAt;
 
-    public float Distance = 6.0f;
+    public float Distance = 10.0f;
     public float DistanceMin = 0.0f;
     public float DistanceMax = 20.0f;
     private float mouseX = 0.0f;

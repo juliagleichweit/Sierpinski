@@ -59,7 +59,16 @@ public class createST : MonoBehaviour
 
         if (level == 0)
         {
-            UpdateMesh(sierp.CreateMesh()); 
+
+            //  UpdateMesh(sierp.CreateMesh()); 
+            ////////////////////////////////////
+            //////////////////////////////////////
+            /////////////////////////////////////
+            //var s = sierp.Subdivide(level);
+            UpdateMesh(sierp.CreateMesh());
+            ////////////////////////////////////
+            //////////////////////////////////////
+            /////////////////////////////////////
         }
         else if (level <= maxLevel)
         {
@@ -124,7 +133,7 @@ public class createST : MonoBehaviour
         Vector3[] vertices = m.vertices;
         var targetPositions = sierp.getTargetsPos()[level+1];
 
-        for (int i = 0, t = 0; i < m.vertexCount - 3; i += 3, t++)
+        for (int i = 0, t = 0; t < targetPositions.Length; i += 3, t++)
         {
             // The step size is equal to speed times frame time.
             float singleStep = speed * Time.deltaTime;
@@ -167,10 +176,10 @@ public class createST : MonoBehaviour
         m.Clear();
         m.vertices = ms.vertices;
         m.triangles = ms.triangles;
-        m.normals = ms.normals;
+        //m.normals = ms.normals;
         m.colors32 = ms.colors32;
         //m.Optimize();
-        //m.RecalculateNormals();
+        m.RecalculateNormals();
     }
 
 }

@@ -54,7 +54,6 @@ public class STetrahedon
 
     public Mesh CreateBaseMesh()
     {
-
         Vector3[] _vertices = new Vector3[12];
         Vector3[] _normals = new Vector3[_vertices.Length];
         Color32[] _colors32 = new Color32[_vertices.Length];
@@ -124,7 +123,10 @@ public class STetrahedon
         if (centers.Count == 0)
             centers.Add(Vector3.zero);
 
-        Vector3[] _vertices = new Vector3[centers.Count * 12];
+        //Vector3[] _vertices = new Vector3[centers.Count * (12+36)];
+        var vert_count = centers.Count * (12 + (centers.Count / 4) * 36); 
+        // centers * 12 per pyramid + 3 extra per 4-block pyramid
+        Vector3[] _vertices = new Vector3[vert_count];
         Vector3[] _normals = new Vector3[_vertices.Length];
         Color32[] _colors32 = new Color32[_vertices.Length];
 
@@ -134,28 +136,79 @@ public class STetrahedon
 
         //var targets = new Vector3[centers.Count * 4];
 
-        foreach (var c in centers)
+        //foreach (var c in centers)
+        for( int k = 0; k < centers.Count; k++)
         {
+            var c = centers[k];
+
             var v0 = c + new Vector3(0, s, 0);                              // head
             var v1 = c + new Vector3(-s2_3 * s, -f1_3 * s, -s2_9 * s);      // left
             var v2 = c + new Vector3(s2_3 * s, -f1_3 * s, -s2_9 * s);       // right
             var v3 = c + new Vector3(0, -f1_3 * s, s8_9 * s);               // top
 
-            _normals[i] = _normals[i + 1] = _normals[i + 2] = Vector3.Cross(v2 - v0, v1 - v0).normalized;
+            //_normals[i] = _normals[i + 1] = _normals[i + 2] = Vector3.Cross(v2 - v0, v1 - v0).normalized;
             _vertices[i++] = v0; _vertices[i++] = v2; _vertices[i++] = v1;
 
-            _normals[i] = _normals[i + 1] = _normals[i + 2] = Vector3.Cross(v1 - v0, v3 - v0).normalized;
+           // _normals[i] = _normals[i + 1] = _normals[i + 2] = Vector3.Cross(v1 - v0, v3 - v0).normalized;
             _vertices[i++] = v0; _vertices[i++] = v1; _vertices[i++] = v3;
 
-            _normals[i] = _normals[i + 1] = _normals[i + 2] = Vector3.Cross(v3 - v0, v2 - v0).normalized;
+            //_normals[i] = _normals[i + 1] = _normals[i + 2] = Vector3.Cross(v3 - v0, v2 - v0).normalized;
             _vertices[i++] = v0; _vertices[i++] = v3; _vertices[i++] = v2;
 
-            _normals[i] = _normals[i + 1] = _normals[i + 2] = Vector3.down;
+           // _normals[i] = _normals[i + 1] = _normals[i + 2] = Vector3.down;
             _vertices[i++] = v1; _vertices[i++] = v2; _vertices[i++] = v3;
 
+            if ((k+1) %4 == 0) //one 4.block pyramid finished
+            {
+                //Debug.Log("Add Extra Vertices");
+                // i-1 is the last vertex of the 4th pyramid (top]
 
+                var bt_top = _vertices[i - 1];
+                var bt_rt = _vertices[i-2];
+                var bt_lft = _vertices[i-3];
+                var bt_frt = _vertices[i-15];
+                 
+                var head_top = _vertices[i-37];
+                var head_rt = _vertices[i-38];
+                var head_lft = _vertices[i-39];
+
+                var center_ft = 1 / 3f * (head_lft + head_rt + bt_frt);
+                var center_lft = 1 / 3f * (head_top + head_lft + bt_lft);
+                var center_rt = 1 / 3f * (head_top + bt_rt + head_rt);
+                var center_bt = 1 / 3f * (bt_lft + bt_rt + bt_frt);
+
+                //bottom part
+                _vertices[i++] = bt_lft;  _vertices[i++] = bt_rt;  _vertices[i++] = center_bt; 
+
+                _vertices[i++] = bt_rt; _vertices[i++] = bt_frt;  _vertices[i++] = center_bt;
+
+                _vertices[i++] = bt_frt;  _vertices[i++] = bt_lft;  _vertices[i++] = center_bt;
+
+                // front part  - top in clockwise dir
+                _vertices[i++] = head_lft; _vertices[i++] = head_rt; _vertices[i++] = center_ft;
+
+                _vertices[i++] = head_rt; _vertices[i++] = bt_frt; _vertices[i++] = center_ft;
+
+                _vertices[i++] = bt_frt; _vertices[i++] = head_lft; _vertices[i++] = center_ft;
+
+                // left part  - top in clockwise dir
+                _vertices[i++] = head_top;  _vertices[i++] = head_lft; _vertices[i++] = center_lft;
+
+                _vertices[i++] = head_lft;  _vertices[i++] = bt_lft; _vertices[i++] = center_lft;
+
+                _vertices[i++] = bt_lft;  _vertices[i++] = head_top;  _vertices[i++] = center_lft;
+
+
+                // right part  - top in clockwise dir
+                _vertices[i++] = head_rt; _vertices[i++] = head_top; _vertices[i++] = center_rt;
+
+                _vertices[i++] = head_top;  _vertices[i++] = bt_rt;  _vertices[i++] = center_rt;
+
+                _vertices[i++] = bt_rt; _vertices[i++] = head_rt;  _vertices[i++] = center_rt;
+            }
         }
 
+        
         int[] _triangles = new int[_vertices.Length];
         int nextColor = 0;
 
@@ -172,7 +225,7 @@ public class STetrahedon
         var m = new Mesh
         {
             vertices = _vertices,
-            normals = _normals,
+            //normals = _normals,
             triangles = _triangles,
             colors32 = _colors32
         };
