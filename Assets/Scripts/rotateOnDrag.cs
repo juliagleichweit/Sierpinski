@@ -6,9 +6,9 @@ public class rotateOnDrag : MonoBehaviour
 {
     public Transform TargetLookAt;
 
-    public float Distance = 10.0f;
-    public float DistanceMin = 0.0f;
-    public float DistanceMax = 20.0f;
+    public float Distance = 3.0f;
+    public float DistanceMin = 0.5f;
+    public float DistanceMax = 5.0f;
     private float mouseX = 0.0f;
     private float mouseY = 0.0f;
     private float startingDistance = 0.0f;
@@ -27,6 +27,7 @@ public class rotateOnDrag : MonoBehaviour
     private float velY = 0.0F;
     private float velZ = 0.0F;
     private Vector3 position = Vector3.zero;
+    private Camera camera;
 
     // Attach this script to a camera, this will make it render in wireframe
     /*void OnPreRender()
@@ -42,6 +43,7 @@ public class rotateOnDrag : MonoBehaviour
     // Start is called before the first frame
     void Start()
     {
+        camera = GetComponent<Camera>();
         Distance = Mathf.Clamp(Distance, DistanceMin, DistanceMax);
         startingDistance = Distance;
         Reset();
@@ -91,8 +93,12 @@ public class rotateOnDrag : MonoBehaviour
 
      Vector3 CalculatePosition(float rotationX, float rotationY, float distance)
     {
-        Vector3 direction = new Vector3(0, 0, -distance);
+        Vector3 direction = new Vector3(0, 0, -distance); 
         Quaternion rotation = Quaternion.Euler(rotationX, rotationY, 0);
+
+        if(camera.orthographic)                             
+            camera.orthographicSize = distance;
+              
         return TargetLookAt.position + (rotation * direction);
     }
 
