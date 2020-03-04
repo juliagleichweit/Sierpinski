@@ -29,17 +29,6 @@ public class rotateOnDrag : MonoBehaviour
     private Vector3 position = Vector3.zero;
     private Camera camera;
 
-    // Attach this script to a camera, this will make it render in wireframe
-    /*void OnPreRender()
-    {
-        GL.wireframe = true;
-    }
-
-    void OnPostRender()
-    {
-        GL.wireframe = false;
-    }*/
-
     // Start is called before the first frame
     void Start()
     {

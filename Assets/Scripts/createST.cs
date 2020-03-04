@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class createST : MonoBehaviour
 {
@@ -8,11 +9,11 @@ public class createST : MonoBehaviour
     private Mesh m;
     public int level = 0;
     private bool start_lerp = false;
-    private int maxLevel = 6;
+    private int maxLevel = 5;
    
     // Angular speed in radians per sec.
-    public float speed = 1.0f;
-
+    public float speed = 1.0f;    
+    
     private List<Mesh> meshes = new List<Mesh>();
     private bool lerpUp = false;
     private bool lerpDown = false;
@@ -20,7 +21,12 @@ public class createST : MonoBehaviour
     private bool upInProgress = false;
     private bool lvl2to1 = false;
 
-    private static float distance = Mathf.PI - Mathf.Acos(1 / 3);
+    private bool changeInnerColor = true;
+    private static float distance = (Mathf.PI - Mathf.Acos(1/3))*0.001f;
+
+    private int[] fdDwnTargetIdx = { 0,0,0,1,1,1,2,2,2,3,3,3};
+    private int[] fdUpTargetIdx = { 14, 11, 7, 0, 11, 7, 0, 7, 14, 0, 14, 11 };
+    
     // Start is called before the first frame update
     void Start()
     {
@@ -31,7 +37,7 @@ public class createST : MonoBehaviour
         var mesh = sierp.CreateBaseMesh();
         meshes.Add(mesh);
         UpdateMesh(mesh); 
-        level = 0;
+        level = 0;        
     }
 
     // Update is called once per frame
@@ -70,9 +76,9 @@ public class createST : MonoBehaviour
     }
 
 
-    public void Speed(string speed)
+    public void Speed(float newSpeed)
     {
-        Debug.Log("speed: " + speed);
+        speed = newSpeed;        
     }
 
     public void PauseResumeFolding()
@@ -82,10 +88,12 @@ public class createST : MonoBehaviour
 
     public void InitFoldUp()
     {
-        start_lerp = true;
-        lerpUp = true;
-        upInProgress = true;
-        lerpDown = false;
+        if (level < maxLevel)
+        {
+            start_lerp = lerpUp = upInProgress = true;
+            changeInnerColor = true;
+            lerpDown = false;
+        }
     }
 
     public void InitFoldDown()
@@ -93,6 +101,7 @@ public class createST : MonoBehaviour
         if (level > 0 || upInProgress)
         {
             start_lerp = prepareDown = lerpDown = true;
+            changeInnerColor = true;
             lerpUp = false;
         }
     }
@@ -166,7 +175,7 @@ public class createST : MonoBehaviour
         var targetPosition = sierp.getTargetsPos()[0][0];
 
         // The step size is equal to speed times frame time.
-        float singleStep = speed * Time.fixedDeltaTime;
+        float singleStep = speed *Time.deltaTime;
 
         if (silent)
         {
@@ -207,7 +216,7 @@ public class createST : MonoBehaviour
         for (int i = 0, t = 0; t < targetPositions.Count; i += 3, t++)
         {
             // The step size is equal to speed times frame time.
-            float singleStep = speed * Time.fixedDeltaTime;
+            float singleStep = speed * Time.deltaTime;
              
             // Move the vertice towards the target by one step                   
             vertices[i] = Vector3.MoveTowards(vertices[i], targetPositions[t], singleStep);
@@ -222,7 +231,7 @@ public class createST : MonoBehaviour
 
         m.vertices = vertices;
     }
-
+    
     /*
    * Fold the tetrahedron to the current finer level.
    * @param silent - true if folding operation should not be shown, 
@@ -231,9 +240,10 @@ public class createST : MonoBehaviour
     private void FoldUp(bool silent = false)
     {
         Vector3[] vertices = m.vertices;
+        Color32[] colors = null;
 
         // The step size is equal to speed times frame time.
-        float singleStep = (speed/level) * Time.fixedDeltaTime;
+        float singleStep = (speed/(2*level)) * Time.deltaTime;
 
         var targetPositions = sierp.getTargetsPos()[level + 2];
 
@@ -244,38 +254,77 @@ public class createST : MonoBehaviour
             prepareDown = false;
         }     
         
+        if(changeInnerColor)
+            colors = m.colors32;
+
         // 4*12 4 block pyramid (0...47) + 3 (center is always the third vertex)
         // i += (50+33+1)
         for (int i = 50, t = 0; t < targetPositions.Count; i += 84, t += 16)
         {
-            // Move the vertice towards the target by one step   
-            //bottom move to higher level
-            vertices[i] = Vector3.MoveTowards(vertices[i], targetPositions[t + 14], singleStep);
-            vertices[i + 3] = Vector3.MoveTowards(vertices[i + 3], targetPositions[t + 11], singleStep);
-            vertices[i + 6] = Vector3.MoveTowards(vertices[i + 6], targetPositions[t + 7], singleStep);
-
-            //front move to higher level
-            vertices[i + 9] = Vector3.MoveTowards(vertices[i + 9], targetPositions[t], singleStep);
-            vertices[i + 12] = Vector3.MoveTowards(vertices[i + 12], targetPositions[t + 11], singleStep);
-            vertices[i + 15] = Vector3.MoveTowards(vertices[i + 15], targetPositions[t + 7], singleStep);
-
-            //left move to higher level
-            vertices[i + 18] = Vector3.MoveTowards(vertices[i + 18], targetPositions[t], singleStep);
-            vertices[i + 21] = Vector3.MoveTowards(vertices[i + 21], targetPositions[t + 7], singleStep);
-            vertices[i + 24] = Vector3.MoveTowards(vertices[i + 24], targetPositions[t + 14], singleStep);
-
-            //right move to higher level
-            vertices[i + 27] = Vector3.MoveTowards(vertices[i + 27], targetPositions[t], singleStep);
-            vertices[i + 30] = Vector3.MoveTowards(vertices[i + 30], targetPositions[t + 14], singleStep);
-            vertices[i + 33] = Vector3.MoveTowards(vertices[i + 33], targetPositions[t + 11], singleStep);
+            FoldInner(vertices, targetPositions, i, t, fdUpTargetIdx, singleStep, colors);
 
             if (!silent)
             {
                 // Check if the position of the old and new level are approximately equal.
-                if (Vector3.Distance(vertices[i], targetPositions[t + 14]) < 0.001f)
+                if (Vector3.Distance(vertices[50], targetPositions[14]) < 0.001f)
                 { 
                     start_lerp = upInProgress = false;
-                    level += 1;                     
+                    level += 1;                    
+                    Level();                    
+                    return;
+                }
+            }
+        }
+
+        m.vertices = vertices;
+
+        if (changeInnerColor)
+        {
+            m.colors32 = colors;
+            changeInnerColor = false;
+        }
+    }
+
+    /*
+   * Folds the tetrahedron to the current coarser level.   
+   */
+    private void FoldDown(bool silent = false)
+    {
+        Vector3[] vertices = m.vertices;
+        var targetPositions = sierp.getTargetsPos()[level + 1];
+        Color32[] colors = null;
+        
+        float singleStep =  (speed/(2*level)) * Time.deltaTime;
+
+        if (silent)
+        {
+            singleStep = Vector3.Distance(vertices[50], targetPositions[14]);
+            upInProgress = false;
+            prepareDown = false;
+        }
+
+        if (changeInnerColor)
+        {
+            colors = m.colors32;
+            Debug.Log("change colors");
+        }
+
+        // 4*12 4 block pyramid (0...47) + 3 (center is always the third vertex)
+        // i += (50+33)
+        for (int i = 50, t = 0; t < targetPositions.Count; i += 84, t += 4)
+        {
+
+            FoldInner(vertices, targetPositions, i, t, fdDwnTargetIdx, singleStep,colors );
+
+            if (!silent)
+            {
+                // Check if the position of the old and new level are approximately equal.
+                if (Vector3.Distance(vertices[i], targetPositions[t]) < 0.001f)
+                {
+                    start_lerp = false;
+                    upInProgress = false;
+                    lvl2to1 = false;
+
                     Level();
                     return;
                 }
@@ -283,60 +332,44 @@ public class createST : MonoBehaviour
         }
 
         m.vertices = vertices;
-    }
 
-    /*
-   * Folds the tetrahedron to the current coarser level.   
-   */
-    private void FoldDown()
-    {
-        Vector3[] vertices = m.vertices;
-        var targetPositions = sierp.getTargetsPos()[level + 1];
-
-        float singleStep = (speed/level) * Time.fixedDeltaTime;
-
-        // 4*12 4 block pyramid (0...47) + 3 (center is always the third vertex)
-        // i += (50+33)
-        for (int i = 50, t = 0; t < targetPositions.Count; i += 84, t += 4)
+        if (changeInnerColor)
         {
-
-            // Move the vertice towards the target by one step   
-            //bottom move to higher level
-            vertices[i] = Vector3.MoveTowards(vertices[i], targetPositions[t], singleStep);
-            vertices[i + 3] = Vector3.MoveTowards(vertices[i + 3], targetPositions[t], singleStep);
-            vertices[i + 6] = Vector3.MoveTowards(vertices[i + 6], targetPositions[t], singleStep);
-
-            //front move to higher level
-            vertices[i + 9] = Vector3.MoveTowards(vertices[i + 9], targetPositions[t + 1], singleStep);
-            vertices[i + 12] = Vector3.MoveTowards(vertices[i + 12], targetPositions[t + 1], singleStep);
-            vertices[i + 15] = Vector3.MoveTowards(vertices[i + 15], targetPositions[t + 1], singleStep);
-
-            //left move to higher level
-            vertices[i + 18] = Vector3.MoveTowards(vertices[i + 18], targetPositions[t + 2], singleStep);
-            vertices[i + 21] = Vector3.MoveTowards(vertices[i + 21], targetPositions[t + 2], singleStep);
-            vertices[i + 24] = Vector3.MoveTowards(vertices[i + 24], targetPositions[t + 2], singleStep);
-
-            //right move to higher level
-            vertices[i + 27] = Vector3.MoveTowards(vertices[i + 27], targetPositions[t + 3], singleStep);
-            vertices[i + 30] = Vector3.MoveTowards(vertices[i + 30], targetPositions[t + 3], singleStep);
-            vertices[i + 33] = Vector3.MoveTowards(vertices[i + 33], targetPositions[t + 3], singleStep);
-
-            // Check if the position of the old and new level are approximately equal.
-            if (Vector3.Distance(vertices[i], targetPositions[t]) < 0.001f)
-            { 
-                start_lerp = false;
-                upInProgress = false;
-                lvl2to1 = false; 
-
-                Level();
-                return;
-            }
+            m.colors32 = colors;
+            changeInnerColor = false;
         }
-        m.vertices = vertices;
     }
 
     /*
-     * 
+     * Fold the inner triangles to the target positions on level+/-1
+     * @param vertices - mesh vertices
+     * @param targets - targetPositions to move the center points of the folding triangles
+     * @param idx_v - current starting index for the next block of folding triangles
+     * @param idx_t - current starting index for the next block of target positions
+     * @param targetIdx - array id indices giving the hop positions for the target positions
+     * @param step - distance to move
+     */
+    private void FoldInner(Vector3[] vertices, List<Vector3> targets, int idx_v, int idx_t, int[] targetIdx, float step, Color32[] colors = null)
+    {
+        for (int i = 0, t = 0; i <=33; i+=3, t++)
+        {
+            vertices[idx_v+i] = Vector3.MoveTowards(vertices[idx_v+i], targets[idx_t + targetIdx[t]], step);
+
+            if(changeInnerColor)
+            {
+                colors[idx_v + i] = Color.Lerp(colors[idx_v + i], Color.black, .5f);
+                colors[idx_v + i-1] = Color.Lerp(colors[idx_v + i-1], Color.black, .5f);
+                colors[idx_v + i-2] = Color.Lerp(colors[idx_v + i-2], Color.black, .5f);
+            }
+        }        
+    }
+
+    /*
+     * Handles the folding up and down procedures
+     * To allow down-folding the mesh to the desired level it has to 
+     * be displayed at this level already folded up. Otherwise the mesh
+     * does not have the needed vertices.
+     * Then it gets folded down again. 
      */
     private void Fold()
     {
@@ -349,12 +382,7 @@ public class createST : MonoBehaviour
                 lvl2to1 = false;
             }
             else
-            {
-                if (level == maxLevel)
-                {
-                    ResetLerpBools();
-                    return;
-                }
+            {              
 
                 // we need the target positions from level + 1
                 if (meshes.Count < level + 2)
@@ -375,12 +403,15 @@ public class createST : MonoBehaviour
             // only fold to base if level went from 1 to 0
             if (!lvl2to1 && level <= 1)
             { 
-                if (prepareDown && !upInProgress)
+               if (prepareDown && !upInProgress)
                 { 
                     level = 0; 
                     Level();
                     FoldBaseUp(true);
                 }
+
+                if (upInProgress)
+                    changeInnerColor = false;
 
                 FoldBaseDown();
             }
@@ -401,17 +432,17 @@ public class createST : MonoBehaviour
                 FoldDown();
             }
         }
-
     }
 
-
+    /*
+     * Clears the display mesh und updates it with the data provided by ms
+     */
     void UpdateMesh(Mesh ms)
     {
         m.Clear();
         m.vertices = ms.vertices;
         m.triangles = ms.triangles; 
-        m.colors32 = ms.colors32; 
-        //m.RecalculateNormals();
+        m.colors32 = ms.colors32;        
     }
 
 }
