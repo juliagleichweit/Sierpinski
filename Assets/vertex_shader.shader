@@ -6,7 +6,7 @@
 		Cull off
 
 		CGPROGRAM
-		#pragma surface surf vertex:vert
+		#pragma surface surf Lambert vertex:vert 
 		#pragma target 3.0
 
 		struct Input {

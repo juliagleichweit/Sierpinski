@@ -125,11 +125,9 @@ public class STetrahedon
 
         float s = Size;
         int i = 0;
-
-        //Debug.Log("CreateMesh #centers.Count: " + centers.Count);
+         
         var targetPos = new List<Vector3>();
-
-        //foreach (var c in centers)
+         
         for (int k = 0; k < centers.Count; k++)
         {
             var c = centers[k];
@@ -154,7 +152,7 @@ public class STetrahedon
             if ((k + 1) % 4 == 0) //one 4.block pyramid finished
             {
                 //Debug.Log("Add Extra Vertices");
-                // i-1 is the last vertex of the 4th pyramid (top]
+                // i-1 is the last vertex of the 4th pyramid  (top of the bottom triangle) 
 
                 var bt_top = _vertices[i - 1];
                 var bt_rt = _vertices[i - 2];
@@ -217,13 +215,12 @@ public class STetrahedon
             _triangles[n] = n;       
         }
 
-        // targetpositions are collected for each level (bottom, front, left, right order)
+        // targetpositions are collected for each level (in order bottom, front, left, right)
         targetPositions.Add(targetPos);
 
         var m = new Mesh
         {
-            vertices = _vertices,
-            //normals = _normals,
+            vertices = _vertices, 
             triangles = _triangles,
             colors32 = _colors32
         };

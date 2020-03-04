@@ -8,8 +8,8 @@ public class createST : MonoBehaviour
     private Mesh m;
     public int level = 0;
     private bool start_lerp = false;
-    private int maxLevel = 4;
-
+    private int maxLevel = 6;
+   
     // Angular speed in radians per sec.
     public float speed = 1.0f;
 
@@ -30,8 +30,7 @@ public class createST : MonoBehaviour
         sierp = new STetrahedon();
         var mesh = sierp.CreateBaseMesh();
         meshes.Add(mesh);
-        UpdateMesh(mesh);
-        Debug.Log("Create BaseMesh: " + Time.deltaTime);
+        UpdateMesh(mesh); 
         level = 0;
     }
 
@@ -49,36 +48,19 @@ public class createST : MonoBehaviour
             LevelDown();
         }
 
-        if (Input.GetKeyDown(KeyCode.L)) // lerping up
+        if (Input.GetKeyDown(KeyCode.Space))  
         {
-            start_lerp = !start_lerp;
-            /*if(!start_lerp)
-            {
-                lerp_up = lerp_down = false;
-            }*/
+            PauseResumeFolding();
         }
-
+    
         if (Input.GetKeyDown(KeyCode.U))
         {
-            Debug.Log("Fold up level: " + level);
-            start_lerp = true;
-            lerpUp = true;
-            upInProgress = true;
-            lerpDown = false;
+            InitFoldUp();
         }
 
         if (Input.GetKeyDown(KeyCode.D))
         {
-            Debug.Log("Fold down level: " + level);
-
-            if (level > 0 || upInProgress)
-            {
-                start_lerp = true;
-                prepareDown = true;
-                lerpDown = true;
-                lerpUp = false;
-                //LevelDown();
-            }
+            InitFoldDown();
         }
 
         if (start_lerp)
@@ -87,6 +69,36 @@ public class createST : MonoBehaviour
         }
     }
 
+
+    public void Speed(string speed)
+    {
+        Debug.Log("speed: " + speed);
+    }
+
+    public void PauseResumeFolding()
+    {
+        start_lerp = !start_lerp;
+    }
+
+    public void InitFoldUp()
+    {
+        start_lerp = true;
+        lerpUp = true;
+        upInProgress = true;
+        lerpDown = false;
+    }
+
+    public void InitFoldDown()
+    {
+        if (level > 0 || upInProgress)
+        {
+            start_lerp = prepareDown = lerpDown = true;
+            lerpUp = false;
+        }
+    }
+    /*
+     * Cancel all pending folds 
+     */
     private void ResetLerpBools()
     {
         start_lerp = false;
@@ -96,27 +108,34 @@ public class createST : MonoBehaviour
         lerpUp = false;
     }
 
+    /*
+     * Update the display mesh to the current level
+     * Uses cached meshes if present, otherwise
+     * it creates the level mesh
+     */
     private void Level()
-    {
-        //Debug.Log("A key was pressed: " + level);    
+    {   
         if (meshes.Count > level)
         {
             UpdateMesh(meshes[level]);
         }
         else
-        {
-            var s = sierp.Subdivide(level);
-            var mesh = s.CreateMesh();
+        {            
+            var mesh = sierp.Subdivide(level).CreateMesh();
             meshes.Add(mesh);
             UpdateMesh(mesh);
         }
     }
 
+    /*
+     * Subdivide mesh to a finer level until max depth is reached
+     * Cancels all pending fold operations
+     */
     public void LevelUp()
     {
         ResetLerpBools();
-        level = Mathf.Min(level + 1, maxLevel);
-        //print("Level A entry : " + level);
+
+        level = Mathf.Min(level + 1, maxLevel); 
 
         if (level <= maxLevel)
         {
@@ -124,30 +143,36 @@ public class createST : MonoBehaviour
         }
     }
 
+    /*
+     * Subdivide mesh to a coarser level until base mesh is reached
+     * Cancels all pending fold operations
+     */
     public void LevelDown()
     {
         ResetLerpBools();
 
-        level = Mathf.Max(0, level - 1);
-
-        //print("Level S entry: " + level);
+        level = Mathf.Max(0, level - 1); 
         Level();
     }
 
-    public void FoldBaseUp(bool silent = false)
+    /*
+     * Folds the base triangle into a tetrahedron.
+     * @param silent - true if folding operation should not be shown, 
+     *                 otherwise false (default)
+     */
+    private void FoldBaseUp(bool silent = false)
     {
         Vector3[] vertices = m.vertices;
         var targetPosition = sierp.getTargetsPos()[0][0];
 
         // The step size is equal to speed times frame time.
-        float singleStep = speed * distance *Time.deltaTime;
+        float singleStep = speed * Time.fixedDeltaTime;
 
         if (silent)
         {
             singleStep = Vector3.Distance(vertices[0], targetPosition);
             prepareDown = false;
         }
-
 
         for (int i = 0; i < m.vertexCount - 3; i += 3)
         {
@@ -158,10 +183,8 @@ public class createST : MonoBehaviour
             {
                 // Check if the position of the old and new level are approximately equal.
                 if (Vector3.Distance(vertices[i], targetPosition) < 0.001f)
-                {
-                    // Swap the position of the cylinder.
-                    start_lerp = false;
-                    upInProgress = false;
+                {                   
+                    start_lerp =  upInProgress = false;
                     level = 1;
 
                     Level();
@@ -173,7 +196,10 @@ public class createST : MonoBehaviour
         m.vertices = vertices;
     }
 
-    public void FoldBaseDown()
+    /*
+     * Folds the base tetrahedron into the base triangle .   
+    */
+    private void FoldBaseDown()
     {
         Vector3[] vertices = m.vertices;
         var targetPositions = sierp.getTargetsPos()[1];
@@ -181,32 +207,33 @@ public class createST : MonoBehaviour
         for (int i = 0, t = 0; t < targetPositions.Count; i += 3, t++)
         {
             // The step size is equal to speed times frame time.
-            float singleStep = speed * distance *Time.deltaTime;
-
-
+            float singleStep = speed * Time.fixedDeltaTime;
+             
             // Move the vertice towards the target by one step                   
             vertices[i] = Vector3.MoveTowards(vertices[i], targetPositions[t], singleStep);
 
             // Check if the position of the old and new level are approximately equal.
             if (Vector3.Distance(vertices[i], targetPositions[0]) < 0.001f)
-            {
-                // Swap the position of the cylinder.
-                start_lerp = false;
-                upInProgress = false;
+            { 
+                start_lerp =  upInProgress = false;
                 level = 0;
             }
         }
 
         m.vertices = vertices;
-
     }
 
-    public void FoldUp(bool silent = false)
+    /*
+   * Fold the tetrahedron to the current finer level.
+   * @param silent - true if folding operation should not be shown, 
+   *                 otherwise false (default)
+   */
+    private void FoldUp(bool silent = false)
     {
         Vector3[] vertices = m.vertices;
 
         // The step size is equal to speed times frame time.
-        float singleStep = speed * distance *Time.deltaTime;
+        float singleStep = (speed/level) * Time.fixedDeltaTime;
 
         var targetPositions = sierp.getTargetsPos()[level + 2];
 
@@ -217,7 +244,6 @@ public class createST : MonoBehaviour
             prepareDown = false;
         }     
         
-
         // 4*12 4 block pyramid (0...47) + 3 (center is always the third vertex)
         // i += (50+33+1)
         for (int i = 50, t = 0; t < targetPositions.Count; i += 84, t += 16)
@@ -247,12 +273,9 @@ public class createST : MonoBehaviour
             {
                 // Check if the position of the old and new level are approximately equal.
                 if (Vector3.Distance(vertices[i], targetPositions[t + 14]) < 0.001f)
-                {
-                    // Swap the position of the cylinder.
-                    start_lerp = false;
-                    level += 1;
-                    upInProgress = false;
-                    //Debug.Log("Fold up fin level: " + level);
+                { 
+                    start_lerp = upInProgress = false;
+                    level += 1;                     
                     Level();
                     return;
                 }
@@ -262,13 +285,15 @@ public class createST : MonoBehaviour
         m.vertices = vertices;
     }
 
-    public void FoldDown()
+    /*
+   * Folds the tetrahedron to the current coarser level.   
+   */
+    private void FoldDown()
     {
         Vector3[] vertices = m.vertices;
         var targetPositions = sierp.getTargetsPos()[level + 1];
 
-        float singleStep = speed * distance  *Time.deltaTime;
-
+        float singleStep = (speed/level) * Time.fixedDeltaTime;
 
         // 4*12 4 block pyramid (0...47) + 3 (center is always the third vertex)
         // i += (50+33)
@@ -298,12 +323,11 @@ public class createST : MonoBehaviour
 
             // Check if the position of the old and new level are approximately equal.
             if (Vector3.Distance(vertices[i], targetPositions[t]) < 0.001f)
-            {
-                // Swap the position of the cylinder.
+            { 
                 start_lerp = false;
                 upInProgress = false;
-                lvl2to1 = false;
-                Debug.Log("Fold down fin level: " + level);
+                lvl2to1 = false; 
+
                 Level();
                 return;
             }
@@ -311,6 +335,9 @@ public class createST : MonoBehaviour
         m.vertices = vertices;
     }
 
+    /*
+     * 
+     */
     private void Fold()
     {
 
@@ -345,15 +372,12 @@ public class createST : MonoBehaviour
 
         if (lerpDown)
         {            
+            // only fold to base if level went from 1 to 0
             if (!lvl2to1 && level <= 1)
-            {
-                Debug.Log("lerpDown level <=1: " + level);
-                Debug.Log("lerpDown level <=1 upinProgess: " + upInProgress);
+            { 
                 if (prepareDown && !upInProgress)
-                {
-                    
-                    level = 0;
-                    //level = Mathf.Max(0, level - 1);
+                { 
+                    level = 0; 
                     Level();
                     FoldBaseUp(true);
                 }
@@ -361,8 +385,7 @@ public class createST : MonoBehaviour
                 FoldBaseDown();
             }
             else
-            {
-                Debug.Log("lerpDown levle else: " + level);
+            { 
                 // we need the positions to be leveled up 
                 if (prepareDown && !upInProgress)
                 {                   
@@ -373,10 +396,8 @@ public class createST : MonoBehaviour
                         lvl2to1 = true;
 
                     FoldUp(true);
-
                 }
-
-                //Debug.Log("level before fold down: " + level);
+                
                 FoldDown();
             }
         }
@@ -388,13 +409,9 @@ public class createST : MonoBehaviour
     {
         m.Clear();
         m.vertices = ms.vertices;
-        m.triangles = ms.triangles;
-        //m.normals = ms.normals;
-        m.colors32 = ms.colors32;
-        //m.Optimize();
+        m.triangles = ms.triangles; 
+        m.colors32 = ms.colors32; 
         //m.RecalculateNormals();
-
-
     }
 
 }
