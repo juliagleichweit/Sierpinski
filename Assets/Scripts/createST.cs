@@ -8,16 +8,19 @@ public class createST : MonoBehaviour
     private Mesh m;
     public int level = 0;
     private bool start_lerp = false;
-    private int maxLevel = 3;
+    private int maxLevel = 4;
 
     // Angular speed in radians per sec.
-    public float speed = 0.5f;
+    public float speed = 1.0f;
 
     private List<Mesh> meshes = new List<Mesh>();
-    private bool lerp_up;
-    private bool lerp_down;
-    private bool prepare_down;
+    private bool lerpUp = false;
+    private bool lerpDown = false;
+    private bool prepareDown = false;
+    private bool upInProgress = false;
+    private bool lvl2to1 = false;
 
+    private static float distance = Mathf.PI - Mathf.Acos(1 / 3);
     // Start is called before the first frame update
     void Start()
     {
@@ -28,7 +31,7 @@ public class createST : MonoBehaviour
         var mesh = sierp.CreateBaseMesh();
         meshes.Add(mesh);
         UpdateMesh(mesh);
-        Debug.Log("Create BaseMesh: " + level++);
+        Debug.Log("Create BaseMesh: " + Time.deltaTime);
         level = 0;
     }
 
@@ -57,23 +60,40 @@ public class createST : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.U))
         {
+            Debug.Log("Fold up level: " + level);
             start_lerp = true;
-            lerp_up = true;
-            lerp_down = false;
+            lerpUp = true;
+            upInProgress = true;
+            lerpDown = false;
         }
 
         if (Input.GetKeyDown(KeyCode.D))
         {
-            start_lerp = true;
-            prepare_down = true;
-            lerp_down = true;
-            lerp_up = false;
+            Debug.Log("Fold down level: " + level);
+
+            if (level > 0 || upInProgress)
+            {
+                start_lerp = true;
+                prepareDown = true;
+                lerpDown = true;
+                lerpUp = false;
+                //LevelDown();
+            }
         }
 
         if (start_lerp)
         {
             Fold();
         }
+    }
+
+    private void ResetLerpBools()
+    {
+        start_lerp = false;
+        prepareDown = false;
+        lerpDown = false;
+        upInProgress = false;
+        lerpUp = false;
     }
 
     private void Level()
@@ -94,6 +114,7 @@ public class createST : MonoBehaviour
 
     public void LevelUp()
     {
+        ResetLerpBools();
         level = Mathf.Min(level + 1, maxLevel);
         //print("Level A entry : " + level);
 
@@ -105,34 +126,47 @@ public class createST : MonoBehaviour
 
     public void LevelDown()
     {
+        ResetLerpBools();
+
         level = Mathf.Max(0, level - 1);
 
         //print("Level S entry: " + level);
         Level();
     }
 
-    public void FoldBaseUp()
+    public void FoldBaseUp(bool silent = false)
     {
         Vector3[] vertices = m.vertices;
         var targetPosition = sierp.getTargetsPos()[0][0];
 
+        // The step size is equal to speed times frame time.
+        float singleStep = speed * distance *Time.deltaTime;
+
+        if (silent)
+        {
+            singleStep = Vector3.Distance(vertices[0], targetPosition);
+            prepareDown = false;
+        }
+
+
         for (int i = 0; i < m.vertexCount - 3; i += 3)
         {
-            // The step size is equal to speed times frame time.
-            float singleStep = speed * Time.deltaTime;
-
             // Move the vertice towards the target by one step                   
             vertices[i] = Vector3.MoveTowards(vertices[i], targetPosition, singleStep);
 
-            // Check if the position of the old and new level are approximately equal.
-            if (Vector3.Distance(vertices[i], targetPosition) < 0.001f)
+            if (!silent)
             {
-                // Swap the position of the cylinder.
-                start_lerp = false;
-                level = 1;
+                // Check if the position of the old and new level are approximately equal.
+                if (Vector3.Distance(vertices[i], targetPosition) < 0.001f)
+                {
+                    // Swap the position of the cylinder.
+                    start_lerp = false;
+                    upInProgress = false;
+                    level = 1;
 
-                Level();
-                return;
+                    Level();
+                    return;
+                }
             }
         }
 
@@ -147,7 +181,8 @@ public class createST : MonoBehaviour
         for (int i = 0, t = 0; t < targetPositions.Count; i += 3, t++)
         {
             // The step size is equal to speed times frame time.
-            float singleStep = speed * Time.deltaTime;
+            float singleStep = speed * distance *Time.deltaTime;
+
 
             // Move the vertice towards the target by one step                   
             vertices[i] = Vector3.MoveTowards(vertices[i], targetPositions[t], singleStep);
@@ -157,6 +192,7 @@ public class createST : MonoBehaviour
             {
                 // Swap the position of the cylinder.
                 start_lerp = false;
+                upInProgress = false;
                 level = 0;
             }
         }
@@ -167,19 +203,20 @@ public class createST : MonoBehaviour
 
     public void FoldUp(bool silent = false)
     {
-        Vector3[] vertices = m.vertices;        
+        Vector3[] vertices = m.vertices;
 
         // The step size is equal to speed times frame time.
-        float singleStep = speed * Time.deltaTime;
+        float singleStep = speed * distance *Time.deltaTime;
+
+        var targetPositions = sierp.getTargetsPos()[level + 2];
 
         if (silent)
         {
-            singleStep = 1.0f;
-            prepare_down = false;
-            Debug.Log("prepare_Down : false");
-        }
-
-        var targetPositions = sierp.getTargetsPos()[level + 2];              
+            singleStep = Vector3.Distance(vertices[50], targetPositions[14]);
+            upInProgress = false;
+            prepareDown = false;
+        }     
+        
 
         // 4*12 4 block pyramid (0...47) + 3 (center is always the third vertex)
         // i += (50+33+1)
@@ -214,7 +251,8 @@ public class createST : MonoBehaviour
                     // Swap the position of the cylinder.
                     start_lerp = false;
                     level += 1;
-
+                    upInProgress = false;
+                    //Debug.Log("Fold up fin level: " + level);
                     Level();
                     return;
                 }
@@ -229,7 +267,8 @@ public class createST : MonoBehaviour
         Vector3[] vertices = m.vertices;
         var targetPositions = sierp.getTargetsPos()[level + 1];
 
-        float singleStep = speed * Time.deltaTime;
+        float singleStep = speed * distance  *Time.deltaTime;
+
 
         // 4*12 4 block pyramid (0...47) + 3 (center is always the third vertex)
         // i += (50+33)
@@ -262,7 +301,9 @@ public class createST : MonoBehaviour
             {
                 // Swap the position of the cylinder.
                 start_lerp = false;
-                //level += 1;
+                upInProgress = false;
+                lvl2to1 = false;
+                Debug.Log("Fold down fin level: " + level);
                 Level();
                 return;
             }
@@ -272,56 +313,70 @@ public class createST : MonoBehaviour
 
     private void Fold()
     {
-       
-        if (lerp_up)
+
+        if (lerpUp)
         {
             if (level == 0)
             {
                 FoldBaseUp();
+                lvl2to1 = false;
             }
             else
             {
+                if (level == maxLevel)
+                {
+                    ResetLerpBools();
+                    return;
+                }
+
                 // we need the target positions from level + 1
                 if (meshes.Count < level + 2)
                     meshes.Add(sierp.Subdivide(level + 1).CreateMesh());
-                
+
+                // we are leveling up from  1 to 2
+                // if we pause before it is finished we actually go
+                // back from level 2 to 1 (since upInProgress)
+                if (level == 1)
+                    lvl2to1 = true;
+
                 FoldUp();
             }
         }
 
-        if (lerp_down)
+        if (lerpDown)
         {            
-            Debug.Log("Fold level: " + level);
-            if (level == 0)
+            if (!lvl2to1 && level <= 1)
             {
-                if (prepare_down)
+                Debug.Log("lerpDown level <=1: " + level);
+                Debug.Log("lerpDown level <=1 upinProgess: " + upInProgress);
+                if (prepareDown && !upInProgress)
                 {
-                    // we need the target positions from level + 1
-                    /*if (meshes.Count < level + 2)
-                        meshes.Add(sierp.Subdivide(level + 1).CreateMesh());
-                        */
-                    //level -= 1;
-                    level = Mathf.Max(0, level - 1);
-                    //Level();
-                    //FoldBaseUp(true);
+                    
+                    level = 0;
+                    //level = Mathf.Max(0, level - 1);
+                    Level();
+                    FoldBaseUp(true);
                 }
 
                 FoldBaseDown();
             }
             else
             {
-                
+                Debug.Log("lerpDown levle else: " + level);
                 // we need the positions to be leveled up 
-                if (prepare_down)
-                {
-                    Debug.Log("level before silent fold up: " + level);
-                    level = Mathf.Max(0, level - 1);
+                if (prepareDown && !upInProgress)
+                {                   
+                    level = Mathf.Max(1, level - 1);
                     Level();
+
+                    if (level == 1)
+                        lvl2to1 = true;
+
                     FoldUp(true);
-                    Debug.Log("level after silent fold up: " + level);
+
                 }
 
-                Debug.Log("level before fold down: " + level);
+                //Debug.Log("level before fold down: " + level);
                 FoldDown();
             }
         }
