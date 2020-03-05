@@ -17,7 +17,7 @@ public class STetrahedon
     public float Size = 3;
 
     private List<Vector3> centers = new List<Vector3>();
-    private List<Color32> colors = new List<Color32> { Color.yellow, Color.red, Color.blue, Color.green };
+    public static List<Color32> colors = new List<Color32> { Color.yellow, Color.red, Color.blue, Color.green };
 
     private static List<List<Vector3>> targetPositions = new List<List<Vector3>>();
 
@@ -29,6 +29,7 @@ public class STetrahedon
     public STetrahedon Subdivide(int aCount)
     {
         var res = this;
+        
         for (int i = 0; i < aCount; i++)
             res = res.Subdivide();
         return res;
@@ -153,8 +154,7 @@ public class STetrahedon
             {
                 //Debug.Log("Add Extra Vertices");
                 // i-1 is the last vertex of the 4th pyramid  (top of the bottom triangle) 
-
-                var bt_top = _vertices[i - 1];
+                
                 var bt_rt = _vertices[i - 2];
                 var bt_lft = _vertices[i - 3];
                 var bt_frt = _vertices[i - 15];
@@ -163,7 +163,7 @@ public class STetrahedon
                 var head_rt = _vertices[i - 38];
                 var head_lft = _vertices[i - 39];
 
-                var center_ft = 1 / 3f * (head_lft + head_rt + bt_frt);
+                var center_ft = 1 / 3f * (bt_frt +head_lft + head_rt);
                 var center_lft = 1 / 3f * (head_top + head_lft + bt_lft);
                 var center_rt = 1 / 3f * (head_top + bt_rt + head_rt);
                 var center_bt = 1 / 3f * (bt_lft + bt_rt + bt_frt);
@@ -201,10 +201,12 @@ public class STetrahedon
                 _vertices[i++] = bt_rt; _vertices[i++] = head_rt; _vertices[i++] = center_rt;
 
                 // add target positions for level to level-1
-                targetPos.Add(center_bt);
-                targetPos.Add(center_ft);
-                targetPos.Add(center_lft);
+                
+                targetPos.Add(center_bt);                                
+                targetPos.Add(center_lft);                
                 targetPos.Add(center_rt);
+                targetPos.Add(center_ft);
+                                
             }
         }
 
@@ -212,9 +214,17 @@ public class STetrahedon
          
         for (int n = 0; n < _triangles.Length; n++)
         {
-            _triangles[n] = n;       
+            /*if( n < 9)
+            {
+                _triangles[n] = 0;
+            }
+            else
+            {*/
+                _triangles[n] = n;
+            //}
+            
         }
-
+        
         // targetpositions are collected for each level (in order bottom, front, left, right)
         targetPositions.Add(targetPos);
 
