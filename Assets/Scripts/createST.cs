@@ -17,16 +17,16 @@ public class createST : MonoBehaviour
     private List<Mesh> meshes = new List<Mesh>();
     private bool lerpUp = false;
     private bool lerpDown = false;
-    private bool prepareDown = false;
+    private bool prepare = false;
     private bool upInProgress = false;
     private bool lvl2to1 = false;
 
     private bool changeInnerColor = true;
     private static float distance = (Mathf.PI - Mathf.Acos(1/3))*0.001f;
 
-    private int[] fdDwnTargetIdx = { 0,0,0,1,1,1,2,2,2,3,3,3};
-    private int[] fdUpTargetIdx = { 14, 11, 7, 0, 11, 7, 0, 7, 14, 0, 14, 11 };
-    
+    private int[] fdDwnTargetIdx = { 0,0,0,3,3,3,1,1,1,2,2,2};
+    private int[] fdUpTargetIdx = { 15, 9, 6, 0, 9, 6, 0, 6, 15, 0, 15, 9 };
+
     // Start is called before the first frame update
     void Start()
     {
@@ -83,14 +83,15 @@ public class createST : MonoBehaviour
 
     public void PauseResumeFolding()
     {
-        start_lerp = !start_lerp;
+        if(lerpUp || lerpDown)
+            start_lerp = !start_lerp;
     }
 
     public void InitFoldUp()
     {
         if (level < maxLevel)
         {
-            start_lerp = lerpUp = upInProgress = true;
+            start_lerp = lerpUp = prepare = upInProgress = true;
             changeInnerColor = true;
             lerpDown = false;
         }
@@ -100,7 +101,7 @@ public class createST : MonoBehaviour
     {
         if (level > 0 || upInProgress)
         {
-            start_lerp = prepareDown = lerpDown = true;
+            start_lerp = prepare = lerpDown = true;
             changeInnerColor = true;
             lerpUp = false;
         }
@@ -111,7 +112,7 @@ public class createST : MonoBehaviour
     private void ResetLerpBools()
     {
         start_lerp = false;
-        prepareDown = false;
+        prepare = false;
         lerpDown = false;
         upInProgress = false;
         lerpUp = false;
@@ -180,7 +181,7 @@ public class createST : MonoBehaviour
         if (silent)
         {
             singleStep = Vector3.Distance(vertices[0], targetPosition);
-            prepareDown = false;
+            prepare = false;
         }
 
         for (int i = 0; i < m.vertexCount - 3; i += 3)
@@ -251,10 +252,13 @@ public class createST : MonoBehaviour
         {
             singleStep = Vector3.Distance(vertices[50], targetPositions[14]);
             upInProgress = false;
-            prepareDown = false;
-        }     
-        
-        if(changeInnerColor)
+            prepare = false;
+        }
+
+      /*  if (prepare)
+            RemoveTrianglesFoldingPt();
+            */
+        //if(changeInnerColor)
             colors = m.colors32;
 
         // 4*12 4 block pyramid (0...47) + 3 (center is always the third vertex)
@@ -266,7 +270,7 @@ public class createST : MonoBehaviour
             if (!silent)
             {
                 // Check if the position of the old and new level are approximately equal.
-                if (Vector3.Distance(vertices[50], targetPositions[14]) < 0.001f)
+                if (Vector3.Distance(vertices[50], targetPositions[15]) < 0.001f)
                 { 
                     start_lerp = upInProgress = false;
                     level += 1;                    
@@ -278,10 +282,10 @@ public class createST : MonoBehaviour
 
         m.vertices = vertices;
 
-        if (changeInnerColor)
+       //if (changeInnerColor)
         {
             m.colors32 = colors;
-            changeInnerColor = false;
+         //   changeInnerColor = false;
         }
     }
 
@@ -300,10 +304,10 @@ public class createST : MonoBehaviour
         {
             singleStep = Vector3.Distance(vertices[50], targetPositions[14]);
             upInProgress = false;
-            prepareDown = false;
+            prepare = false;
         }
 
-        if (changeInnerColor)
+        //if (changeInnerColor)
         {
             colors = m.colors32;
             Debug.Log("change colors");
@@ -333,13 +337,14 @@ public class createST : MonoBehaviour
 
         m.vertices = vertices;
 
-        if (changeInnerColor)
+        //if (changeInnerColor)
         {
             m.colors32 = colors;
-            changeInnerColor = false;
+           // changeInnerColor = false;
         }
     }
 
+    private Color32[] mu = { Color.gray, Color.cyan, Color.magenta, Color.white};
     /*
      * Fold the inner triangles to the target positions on level+/-1
      * @param vertices - mesh vertices
@@ -351,17 +356,28 @@ public class createST : MonoBehaviour
      */
     private void FoldInner(Vector3[] vertices, List<Vector3> targets, int idx_v, int idx_t, int[] targetIdx, float step, Color32[] colors = null)
     {
+        int k = -1;
         for (int i = 0, t = 0; i <=33; i+=3, t++)
         {
             vertices[idx_v+i] = Vector3.MoveTowards(vertices[idx_v+i], targets[idx_t + targetIdx[t]], step);
+            
+          /*   if(changeInnerColor)
+            {*/
+                
+                if (t % 3 == 0)
+                {
+                    k += 1;
+                    Debug.Log("k: " + k + mu[k]);
+                }
+            colors[idx_v + i] = mu[k];
+                colors[idx_v + i -2] = mu[k];
+                colors[idx_v + i - 1] = mu[k];
 
-            if(changeInnerColor)
-            {
-                colors[idx_v + i] = Color.Lerp(colors[idx_v + i], Color.black, .5f);
-                colors[idx_v + i-1] = Color.Lerp(colors[idx_v + i-1], Color.black, .5f);
-                colors[idx_v + i-2] = Color.Lerp(colors[idx_v + i-2], Color.black, .5f);
-            }
-        }        
+                // colors[idx_v + i] = colors[idx_v + i] + Color.black;//Color.Lerp(colors[idx_v + i], Color.black, .5f);
+                // colors[idx_v + i - 1] = colors[idx_v + i-1] + Color.black;//Color.Lerp(colors[idx_v + i - 1], Color.black, .5f);
+                // colors[idx_v + i - 2] = colors[idx_v -2] + Color.black;//Color.Lerp(colors[idx_v + i - 2], Color.black, .5f);
+          //  }
+        }
     }
 
     /*
@@ -403,7 +419,7 @@ public class createST : MonoBehaviour
             // only fold to base if level went from 1 to 0
             if (!lvl2to1 && level <= 1)
             { 
-               if (prepareDown && !upInProgress)
+               if (prepare && !upInProgress)
                 { 
                     level = 0; 
                     Level();
@@ -418,7 +434,7 @@ public class createST : MonoBehaviour
             else
             { 
                 // we need the positions to be leveled up 
-                if (prepareDown && !upInProgress)
+                if (prepare && !upInProgress)
                 {                   
                     level = Mathf.Max(1, level - 1);
                     Level();
@@ -432,6 +448,53 @@ public class createST : MonoBehaviour
                 FoldDown();
             }
         }
+    }
+
+    /*
+    * Skip the triangles at the target folding positions. 
+    * Color the folding vertices in the target positions color
+    */
+    public void RemoveTrianglesFoldingPt()
+    {
+       prepare = false;
+        int[] triangles = m.triangles;
+        Color32[] newColors = m.colors32;
+
+        for (int i = 0; i < m.vertexCount; i += 192)
+        {
+            int idx = i % 84; // (48+36);
+            if (idx == 0)
+            {
+                triangles[i + 9] = triangles[i + 10] = triangles[i + 11] = i + 8;
+                triangles[i + 18] = triangles[i + 19] = triangles[i + 20] = i + 17;
+                triangles[i + 27] = triangles[i + 28] = triangles[i + 29] = i + 26;
+                triangles[i + 36] = triangles[i + 37] = triangles[i + 38] = i + 35;
+
+                //bottom red blue green
+                // front yellow blue green
+                // left yellow green red
+                // right yellow red blue                
+                
+            }
+            /*if (check < 48)
+             {
+                 if (check == 9 || check == 18 || check == 27 || check == 36)
+                 {
+                     triangles[i++] = triangles[i++] = triangles[i] = i - 1;
+                     continue;
+                 }
+             }
+             else
+             {
+
+             }    */
+
+
+            //triangles[i]=i;
+        }
+
+        m.triangles = triangles;
+        m.colors32 = newColors;
     }
 
     /*

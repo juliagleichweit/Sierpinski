@@ -154,7 +154,7 @@ public class STetrahedon
                 //Debug.Log("Add Extra Vertices");
                 // i-1 is the last vertex of the 4th pyramid  (top of the bottom triangle) 
 
-                var bt_top = _vertices[i - 1];
+               // var bt_top = _vertices[i - 1];
                 var bt_rt = _vertices[i - 2];
                 var bt_lft = _vertices[i - 3];
                 var bt_frt = _vertices[i - 15];
@@ -186,7 +186,7 @@ public class STetrahedon
 
                 // left part  - top in clockwise dir
                 for (int col = 0; col < 9; col++)
-                    _colors32[i + col] = colors[2];
+                    _colors32[i + col] = colors[2]+Color.gray;
 
                 _vertices[i++] = head_top; _vertices[i++] = head_lft; _vertices[i++] = center_lft;
                 _vertices[i++] = head_lft; _vertices[i++] = bt_lft; _vertices[i++] = center_lft;
@@ -202,9 +202,9 @@ public class STetrahedon
 
                 // add target positions for level to level-1
                 targetPos.Add(center_bt);
-                targetPos.Add(center_ft);
                 targetPos.Add(center_lft);
                 targetPos.Add(center_rt);
+                targetPos.Add(center_ft);
             }
         }
 
