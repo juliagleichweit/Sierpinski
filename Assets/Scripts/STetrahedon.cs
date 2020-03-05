@@ -186,7 +186,7 @@ public class STetrahedon
 
                 // left part  - top in clockwise dir
                 for (int col = 0; col < 9; col++)
-                    _colors32[i + col] = colors[2]+Color.gray;
+                    _colors32[i + col] = colors[2];
 
                 _vertices[i++] = head_top; _vertices[i++] = head_lft; _vertices[i++] = center_lft;
                 _vertices[i++] = head_lft; _vertices[i++] = bt_lft; _vertices[i++] = center_lft;

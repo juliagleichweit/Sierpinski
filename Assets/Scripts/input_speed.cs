@@ -13,6 +13,7 @@ public class input_speed : MonoBehaviour
     public void changeSpeed()
     {      
         string speed = inputfield.GetComponent<Text>().text;
+        speed = speed.Replace(".", ",");
         float newSpeed;       
 
         if(float.TryParse(speed, out newSpeed))
