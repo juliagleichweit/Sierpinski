@@ -41,32 +41,6 @@ public class createST : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-
-        if (Input.GetKeyDown(KeyCode.A))
-        {
-            LevelUp();
-        }
-
-        if (Input.GetKeyDown(KeyCode.S))
-        {
-            LevelDown();
-        }
-
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            PauseResumeFolding();
-        }
-
-        if (Input.GetKeyDown(KeyCode.U))
-        {
-            InitFoldUp();
-        }
-
-        if (Input.GetKeyDown(KeyCode.D))
-        {
-            InitFoldDown();
-        }
-
         if (start_lerp)
         {
             Fold();
@@ -85,8 +59,21 @@ public class createST : MonoBehaviour
             start_lerp = !start_lerp;
     }
 
+    /*
+     * Implements the stop functionality and displays the base triangle
+     **/    
+    public void JumpToBase()
+    {     
+        ResetLerpBools();
+        level = 0;
+        Level();
+    }
+
     public void InitFoldUp()
     {
+        if (lerpUp)
+            return;
+
         if (level < maxLevel)
         {
             start_lerp = lerpUp = prepare = upInProgress = true;
@@ -101,6 +88,9 @@ public class createST : MonoBehaviour
 
     public void InitFoldDown()
     {
+        if (lerpDown)
+            return;
+
         if (level > 0 || upInProgress)
         {
             //change direction midway, colors go back
