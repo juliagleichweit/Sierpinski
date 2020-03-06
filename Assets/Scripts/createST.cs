@@ -24,6 +24,7 @@ public class createST : MonoBehaviour
     private int[] fdDwnTargetIdx = { 0, 0, 0, 3, 3, 3, 1, 1, 1, 2, 2, 2 };
     private int[] fdUpTargetIdx = { 15, 9, 6, 0, 9, 6, 0, 6, 15, 0, 15, 9 };
 
+    private float lerpBy = 0f;
     // Start is called before the first frame update
     void Start()
     {
@@ -257,6 +258,7 @@ public class createST : MonoBehaviour
 
         colors = m.colors32;
         float dist = 0f;
+
         // 4*12 4 block pyramid (0...47) + 3 (center is always the third vertex)
         // i += (50+33+1)
         for (int i = 50, t = 0; t < targetPositions.Count; i += 84, t += 16)
@@ -267,9 +269,10 @@ public class createST : MonoBehaviour
             if (!silent)
             {
                 // Check if the position of the old and new level are approximately equal.
-                if (/*Vector3.Distance(vertices[50], targetPositions[15])*/ dist < 0.001f)
+                if (dist < 0.001f)
                 {                    
                     ResetLerpBools();
+                    lerpBy = 0f;
                     level += 1;
                     Level();
                     return;
@@ -312,10 +315,11 @@ public class createST : MonoBehaviour
             if (!silent)
             {
                 // Check if the position of the old and new level are approximately equal.
-                if (Vector3.Distance(vertices[i], targetPositions[t]) < 0.001f)
+                if (dist < 0.001f)
                 {
                     ResetLerpBools();
                     lvl2to1 = false;
+                    lerpBy = 0f;
                     Level();
                     return;
                 }
@@ -327,8 +331,8 @@ public class createST : MonoBehaviour
 
     }
 
-    private Color32[] mu = { Color.gray, Color.gray,Color.gray, Color.cyan, Color.cyan,Color.cyan,Color.magenta,Color.magenta,Color.magenta, Color.white, Color.white, Color.white };
-    private Color32[] colorUp = { Color.red, Color.green, Color.blue, Color.yellow, Color.green, Color.blue, Color.yellow, Color.blue, Color.red, Color.yellow, Color.red, Color.green };
+    private Color32[] colorUp2 = { Color.red, Color.green,Color.blue, Color.yellow, Color.green,Color.blue,Color.yellow,Color.blue,Color.red, Color.yellow, Color.red, Color.green };    
+    private Color32[] colorUp = { Color.red, Color.blue, Color.green, Color.yellow, Color.blue, Color.green, Color.yellow, Color.green, Color.red, Color.yellow, Color.red, Color.blue };
     private Color32[] colorDown = { Color.yellow, Color.yellow, Color.yellow, Color.red, Color.red, Color.red, Color.blue, Color.blue, Color.blue, Color.green, Color.green, Color.green };
     /*
      * Fold the inner triangles to the target positions on level+/-1
@@ -338,24 +342,20 @@ public class createST : MonoBehaviour
      * @param idx_t - current starting index for the next block of target positions
      * @param targetIdx - array id indices giving the hop positions for the target positions
      * @param step - distance to move
-     */
+     */    
     private void FoldInner(Vector3[] vertices, List<Vector3> targets, int idx_v, int idx_t, int[] targetIdx, float step, Color32[] colors, float dist)
     {
-        var lerpFrom = colorDown;
+        var lerpFrom = lerpDown ? colorUp2: colorDown;
         var lerpTo = lerpDown ? colorDown : colorUp;
-        float lerpBy = 2/dist * Time.deltaTime;
-
-        /*if (lerpDown)
-            lerpBy = 1f;
-            */
-        Debug.Log(dist);
+        lerpBy += (dist/ level) * Time.deltaTime * speed;
+       
         for (int i = 0, t = 0; i <= 33; i += 3, t++)
         {
             vertices[idx_v + i] = Vector3.MoveTowards(vertices[idx_v + i], targets[idx_t + targetIdx[t]], step);
 
-            colors[idx_v + i] = mu[t]; // Color32.Lerp(lerpFrom[t], lerpTo[t], lerpBy);
-            colors[idx_v + i - 2] = mu[t]; //Color32.Lerp(lerpFrom[t], lerpTo[t], lerpBy);
-            colors[idx_v + i - 1] = mu[t]; // Color32.Lerp(lerpFrom[t], lerpTo[t], lerpBy);            
+            colors[idx_v + i] =  Color32.Lerp(lerpFrom[t], lerpTo[t], lerpBy);
+            colors[idx_v + i - 2] = Color32.Lerp(lerpFrom[t], lerpTo[t], lerpBy);
+            colors[idx_v + i - 1] = Color32.Lerp(lerpFrom[t], lerpTo[t], lerpBy);            
         }
     }
 
@@ -401,7 +401,7 @@ public class createST : MonoBehaviour
                     level = 0;
                     Level();
                     FoldBaseUp(true);
-                }
+                }                
 
                 FoldBaseDown();
             }
@@ -417,7 +417,7 @@ public class createST : MonoBehaviour
                         lvl2to1 = true;
 
                     FoldUp(true);
-                }
+                }               
 
                 FoldDown();
             }
