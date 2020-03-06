@@ -90,7 +90,11 @@ public class createST : MonoBehaviour
         if (level < maxLevel)
         {
             start_lerp = lerpUp = prepare = upInProgress = true;
-           
+
+            //change direction midway, colors go back
+            if (lerpDown)
+                lerpBy = 1 - lerpBy;
+
             lerpDown = false;
         }
     }
@@ -99,6 +103,10 @@ public class createST : MonoBehaviour
     {
         if (level > 0 || upInProgress)
         {
+            //change direction midway, colors go back
+            if (lerpUp)
+                lerpBy = 1 - lerpBy;
+
             start_lerp = prepare = lerpDown = true;
             lerpUp = false;
         }
