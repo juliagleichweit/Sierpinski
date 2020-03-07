@@ -8,25 +8,28 @@ public class createST : MonoBehaviour
     private STetrahedon sierp;
     private Mesh m;
     public int level = 0;
-    private bool start_lerp = false;
     public int maxLevel = 6;
 
     // Angular speed in radians per sec.
     public float speed = 1.0f;
 
     private List<Mesh> meshes = new List<Mesh>();
+
+    // booleans to manage folding 
+    private bool start_lerp = false;
     private bool lerpUp = false;
     private bool lerpDown = false;
     private bool prepare = false;
     private bool upInProgress = false;
     private bool lvl2to1 = false;
-    private bool simulate = false;
 
     // indices for the targetpositions
     private int[] fdDwnTargetIdx = { 3, 3, 3, 1, 1, 1, 2, 2, 2, 0, 0, 0 };
     private int[] fdUpTargetIdx = { 0, 9, 6, 0, 6, 15, 0, 15, 9, 15, 9, 6 };
 
+    // for intepolating the colors during folding
     private float lerpBy = 0f;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -83,7 +86,7 @@ public class createST : MonoBehaviour
             //change direction midway, colors go back
             if (lerpDown)
                 lerpBy = 1 - lerpBy;
-                
+
             lerpDown = false;
         }
     }
@@ -125,7 +128,7 @@ public class createST : MonoBehaviour
 
         if (meshes.Count > level)
         {
-           if (level == 6)
+            if (level == 6)
             {
                 SimulateLevel6();
             }
@@ -136,9 +139,9 @@ public class createST : MonoBehaviour
         }
         else
         {
-            var mesh  = sierp.Subdivide(level).CreateMesh();            
+            var mesh = sierp.Subdivide(level).CreateMesh();
             meshes.Add(mesh);
-            if(level == 6)
+            if (level == 6)
             {
                 SimulateLevel6();
             }
@@ -146,17 +149,22 @@ public class createST : MonoBehaviour
             {
                 UpdateMesh(mesh);
             }
-            
+
         }
     }
 
+    /*
+     * Cannot go further than level 6 --> Untiy cuts vertices (reason unknow, no camera clipping or similar)
+     * Therefore we have to simulate level 6 by folding level 5 up and displaying this 
+     */
     private void SimulateLevel6()
     {
         level = 5;
         UpdateMesh(meshes[5]);
-        FoldUp(true); 
+        FoldUp(true);
         level = 6;
     }
+
     /*
      * Subdivide mesh to a finer level until max depth is reached
      * Cancels all pending fold operations
@@ -179,9 +187,10 @@ public class createST : MonoBehaviour
      */
     public void LevelDown()
     {
-        ResetLerpBools();
+        if (!lerpDown)
+            level = Mathf.Max(0, level - 1);
 
-        level = Mathf.Max(0, level - 1);
+        ResetLerpBools();
         Level();
     }
 
@@ -293,17 +302,16 @@ public class createST : MonoBehaviour
                 {
                     ResetLerpBools();
                     lerpBy = 0f;
-                    level += 1;
-                    //if (level != 6)
-                        Level();
-                    
+                    level += 1; 
+                    Level();
+
                     return;
                 }
             }
         }
 
-        m.vertices = vertices;                
-        m.colors32 = colors;        
+        m.vertices = vertices;
+        m.colors32 = colors;
     }
 
     /*
@@ -314,7 +322,7 @@ public class createST : MonoBehaviour
         Vector3[] vertices = m.vertices;
         var targetPositions = sierp.getTargetsPos()[level + 1];
         Color32[] colors = null;
-         
+
         float singleStep = (speed / (Mathf.Pow(2, level))) * Time.deltaTime;
 
         colors = m.colors32;
@@ -326,14 +334,14 @@ public class createST : MonoBehaviour
         {
             dist = Vector3.Distance(vertices[11], targetPositions[3]);
             FoldInner(vertices, targetPositions, i, t, fdDwnTargetIdx, singleStep, colors, dist);
-          
+
             // Check if the position of the old and new level are approximately equal.
             if (dist < 0.001f)
             {
                 ResetLerpBools();
                 lvl2to1 = false;
-                lerpBy = 0f; 
-                Level(); 
+                lerpBy = 0f;
+                Level();
                 return;
             }
         }
@@ -342,18 +350,19 @@ public class createST : MonoBehaviour
         m.colors32 = colors;
 
     }
+
+    private Color32[] colorUp = { Color.yellow, Color.blue, Color.green, Color.yellow, Color.green, Color.red, Color.yellow, Color.red, Color.blue, Color.red, Color.blue, Color.green };
+    private Color32[] colorDown = { Color.red, Color.red, Color.red, Color.blue, Color.blue, Color.blue, Color.green, Color.green, Color.green, Color.yellow, Color.yellow, Color.yellow };
     
-    private Color32[] colorUp = { Color.yellow, Color.blue, Color.green, Color.yellow, Color.green, Color.red, Color.yellow, Color.red, Color.blue, Color.red, Color.blue, Color.green};
-    private Color32[] colorDown = { Color.red, Color.red, Color.red,  Color.blue, Color.blue, Color.blue, Color.green, Color.green, Color.green, Color.yellow, Color.yellow, Color.yellow };
     /*
-     * Fold the inner triangles to the target positions on level+/-1
-     * @param vertices - mesh vertices
-     * @param targets - targetPositions to move the center points of the folding triangles
-     * @param idx_v - current starting index for the next block of folding triangles
-     * @param idx_t - current starting index for the next block of target positions
-     * @param targetIdx - array id indices giving the hop positions for the target positions
-     * @param step - distance to move
-     */
+      * Fold the inner triangles to the target positions on level+/-1
+      * @param vertices - mesh vertices
+      * @param targets - targetPositions to move the center points of the folding triangles
+      * @param idx_v - current starting index for the next block of folding triangles
+      * @param idx_t - current starting index for the next block of target positions
+      * @param targetIdx - array id indices giving the hop positions for the target positions
+      * @param step - distance to move
+      */
     private void FoldInner(Vector3[] vertices, List<Vector3> targets, int idx_v, int idx_t, int[] targetIdx, float step, Color32[] colors, float dist)
     {
         var lerpFrom = lerpDown ? colorUp : colorDown;
@@ -365,21 +374,21 @@ public class createST : MonoBehaviour
             vertices[idx_v + i] = Vector3.MoveTowards(vertices[idx_v + i], targets[idx_t + targetIdx[t]], step);
             vertices[idx_v + i + 3] = Vector3.MoveTowards(vertices[idx_v + i + 3], targets[idx_t + targetIdx[t + 1]], step);
             vertices[idx_v + i + 6] = Vector3.MoveTowards(vertices[idx_v + i + 6], targets[idx_t + targetIdx[t + 2]], step);
-            
+
             //top inner triangle
-            colors[idx_v + i ] = Color32.Lerp(lerpFrom[col], lerpTo[col], lerpBy);
+            colors[idx_v + i] = Color32.Lerp(lerpFrom[col], lerpTo[col], lerpBy);
             colors[idx_v + i - 2] = Color32.Lerp(lerpFrom[col], lerpTo[col], lerpBy);
             colors[idx_v + i - 1] = Color32.Lerp(lerpFrom[col], lerpTo[col++], lerpBy);
-            
+
             //right inner triangle
-            colors[idx_v + i + 3] =  Color32.Lerp(lerpFrom[col], lerpTo[col], lerpBy);
+            colors[idx_v + i + 3] = Color32.Lerp(lerpFrom[col], lerpTo[col], lerpBy);
             colors[idx_v + i + 2] = Color32.Lerp(lerpFrom[col], lerpTo[col], lerpBy);
             colors[idx_v + i + 1] = Color32.Lerp(lerpFrom[col], lerpTo[col++], lerpBy);
-            
+
             //left inner triangle
-            colors[idx_v + i + 6] =  Color32.Lerp(lerpFrom[col], lerpTo[col], lerpBy);
+            colors[idx_v + i + 6] = Color32.Lerp(lerpFrom[col], lerpTo[col], lerpBy);
             colors[idx_v + i + 5] = Color32.Lerp(lerpFrom[col], lerpTo[col], lerpBy);
-            colors[idx_v + i + 4] = Color32.Lerp(lerpFrom[col], lerpTo[col++], lerpBy);            
+            colors[idx_v + i + 4] = Color32.Lerp(lerpFrom[col], lerpTo[col++], lerpBy);
         }
     }
 
@@ -431,7 +440,7 @@ public class createST : MonoBehaviour
             }
             else
             {
-                if(level==6)
+                if (level == 6)
                 {
                     // we only need to fold down                    
                     // set level to 5 to get the correct target positions
@@ -447,9 +456,10 @@ public class createST : MonoBehaviour
                         lvl2to1 = true;
 
                     FoldUp(true);
+                    lerpBy = 0f;
                 }
 
-                
+
                 FoldDown();
             }
         }
@@ -464,7 +474,7 @@ public class createST : MonoBehaviour
     {
         m.Clear();
         m.vertices = ms.vertices;
-        m.colors32 = ms.colors32;        
+        m.colors32 = ms.colors32;
         m.triangles = ms.triangles;
         //m.RecalculateBounds();        
     }
