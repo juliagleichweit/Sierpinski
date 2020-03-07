@@ -9,7 +9,7 @@ public class createST : MonoBehaviour
     private Mesh m;
     public int level = 0;
     private bool start_lerp = false;
-    public int maxLevel = 5;
+    public int maxLevel = 6;
 
     // Angular speed in radians per sec.
     public float speed = 1.0f;
@@ -20,9 +20,11 @@ public class createST : MonoBehaviour
     private bool prepare = false;
     private bool upInProgress = false;
     private bool lvl2to1 = false;
+    private bool simulate = false;
 
+    // indices for the targetpositions
     private int[] fdDwnTargetIdx = { 3, 3, 3, 1, 1, 1, 2, 2, 2, 0, 0, 0 };
-    private int[] fdUpTargetIdx = { 0, 9, 5, 0, 5, 15, 0, 15, 9, 15, 9, 5 };
+    private int[] fdUpTargetIdx = { 0, 9, 6, 0, 6, 15, 0, 15, 9, 15, 9, 6 };
 
     private float lerpBy = 0f;
     // Start is called before the first frame update
@@ -81,7 +83,7 @@ public class createST : MonoBehaviour
             //change direction midway, colors go back
             if (lerpDown)
                 lerpBy = 1 - lerpBy;
-
+                
             lerpDown = false;
         }
     }
@@ -123,16 +125,38 @@ public class createST : MonoBehaviour
 
         if (meshes.Count > level)
         {
-            UpdateMesh(meshes[level]);
+           if (level == 6)
+            {
+                SimulateLevel6();
+            }
+            else
+            {
+                UpdateMesh(meshes[level]);
+            }
         }
         else
         {
-            var mesh = sierp.Subdivide(level).CreateMesh();
+            var mesh  = sierp.Subdivide(level).CreateMesh();            
             meshes.Add(mesh);
-            UpdateMesh(mesh);
+            if(level == 6)
+            {
+                SimulateLevel6();
+            }
+            else
+            {
+                UpdateMesh(mesh);
+            }
+            
         }
     }
 
+    private void SimulateLevel6()
+    {
+        level = 5;
+        UpdateMesh(meshes[5]);
+        FoldUp(true); 
+        level = 6;
+    }
     /*
      * Subdivide mesh to a finer level until max depth is reached
      * Cancels all pending fold operations
@@ -247,6 +271,7 @@ public class createST : MonoBehaviour
         if (silent)
         {
             singleStep = Vector3.Distance(vertices[11], targetPositions[0]);
+            lerpBy = 1;
             upInProgress = false;
             prepare = false;
         }
@@ -269,14 +294,16 @@ public class createST : MonoBehaviour
                     ResetLerpBools();
                     lerpBy = 0f;
                     level += 1;
-                    Level();
+                    //if (level != 6)
+                        Level();
+                    
                     return;
                 }
             }
         }
 
-        m.vertices = vertices;
-        m.colors32 = colors;
+        m.vertices = vertices;                
+        m.colors32 = colors;        
     }
 
     /*
@@ -287,7 +314,7 @@ public class createST : MonoBehaviour
         Vector3[] vertices = m.vertices;
         var targetPositions = sierp.getTargetsPos()[level + 1];
         Color32[] colors = null;
-        Debug.Log("targetps count: " + targetPositions.Count);
+         
         float singleStep = (speed / (Mathf.Pow(2, level))) * Time.deltaTime;
 
         colors = m.colors32;
@@ -305,8 +332,8 @@ public class createST : MonoBehaviour
             {
                 ResetLerpBools();
                 lvl2to1 = false;
-                lerpBy = 0f;
-                Level();
+                lerpBy = 0f; 
+                Level(); 
                 return;
             }
         }
@@ -315,10 +342,9 @@ public class createST : MonoBehaviour
         m.colors32 = colors;
 
     }
-
-    private Color32[] colorUp2 = { Color.red, Color.green, Color.blue, Color.yellow, Color.green, Color.blue, Color.yellow, Color.blue, Color.red, Color.yellow, Color.red, Color.green };
-    private Color32[] colorUp = { Color.red, Color.blue, Color.green, Color.yellow, Color.blue, Color.green, Color.yellow, Color.green, Color.red, Color.yellow, Color.red, Color.blue };
-    private Color32[] colorDown = { Color.yellow, Color.yellow, Color.yellow, Color.red, Color.red, Color.red, Color.blue, Color.blue, Color.blue, Color.green, Color.green, Color.green };
+    
+    private Color32[] colorUp = { Color.yellow, Color.blue, Color.green, Color.yellow, Color.green, Color.red, Color.yellow, Color.red, Color.blue, Color.red, Color.blue, Color.green};
+    private Color32[] colorDown = { Color.red, Color.red, Color.red,  Color.blue, Color.blue, Color.blue, Color.green, Color.green, Color.green, Color.yellow, Color.yellow, Color.yellow };
     /*
      * Fold the inner triangles to the target positions on level+/-1
      * @param vertices - mesh vertices
@@ -330,27 +356,30 @@ public class createST : MonoBehaviour
      */
     private void FoldInner(Vector3[] vertices, List<Vector3> targets, int idx_v, int idx_t, int[] targetIdx, float step, Color32[] colors, float dist)
     {
-        var lerpFrom = lerpDown ? colorUp2 : colorDown;
+        var lerpFrom = lerpDown ? colorUp : colorDown;
         var lerpTo = lerpDown ? colorDown : colorUp;
         lerpBy += (dist / level) * Time.deltaTime * speed;
 
-        for (int i = 0, t = 0; i <= 65; i += 18, t += 3)
+        for (int i = 0, t = 0, col = 0; i <= 65; i += 18, t += 3)
         {
             vertices[idx_v + i] = Vector3.MoveTowards(vertices[idx_v + i], targets[idx_t + targetIdx[t]], step);
             vertices[idx_v + i + 3] = Vector3.MoveTowards(vertices[idx_v + i + 3], targets[idx_t + targetIdx[t + 1]], step);
             vertices[idx_v + i + 6] = Vector3.MoveTowards(vertices[idx_v + i + 6], targets[idx_t + targetIdx[t + 2]], step);
-
-            /* colors[idx_v + i] =  Color32.Lerp(lerpFrom[t], lerpTo[t], lerpBy);
-             colors[idx_v + i - 2] = Color32.Lerp(lerpFrom[t], lerpTo[t], lerpBy);
-             colors[idx_v + i - 1] = Color32.Lerp(lerpFrom[t], lerpTo[t], lerpBy);
-
-             colors[idx_v + i + 3] =  Color32.Lerp(lerpFrom[t], lerpTo[t], lerpBy);
-             colors[idx_v + i + 2] = Color32.Lerp(lerpFrom[t], lerpTo[t], lerpBy);
-             colors[idx_v + i + 1] = Color32.Lerp(lerpFrom[t], lerpTo[t], lerpBy);
-
-             colors[idx_v + i + 6] =  Color32.Lerp(lerpFrom[t], lerpTo[t], lerpBy);
-             colors[idx_v + i + 5] = Color32.Lerp(lerpFrom[t], lerpTo[t], lerpBy);
-             colors[idx_v + i + 4] = Color32.Lerp(lerpFrom[t], lerpTo[t], lerpBy);     */
+            
+            //top inner triangle
+            colors[idx_v + i ] = Color32.Lerp(lerpFrom[col], lerpTo[col], lerpBy);
+            colors[idx_v + i - 2] = Color32.Lerp(lerpFrom[col], lerpTo[col], lerpBy);
+            colors[idx_v + i - 1] = Color32.Lerp(lerpFrom[col], lerpTo[col++], lerpBy);
+            
+            //right inner triangle
+            colors[idx_v + i + 3] =  Color32.Lerp(lerpFrom[col], lerpTo[col], lerpBy);
+            colors[idx_v + i + 2] = Color32.Lerp(lerpFrom[col], lerpTo[col], lerpBy);
+            colors[idx_v + i + 1] = Color32.Lerp(lerpFrom[col], lerpTo[col++], lerpBy);
+            
+            //left inner triangle
+            colors[idx_v + i + 6] =  Color32.Lerp(lerpFrom[col], lerpTo[col], lerpBy);
+            colors[idx_v + i + 5] = Color32.Lerp(lerpFrom[col], lerpTo[col], lerpBy);
+            colors[idx_v + i + 4] = Color32.Lerp(lerpFrom[col], lerpTo[col++], lerpBy);            
         }
     }
 
@@ -402,8 +431,14 @@ public class createST : MonoBehaviour
             }
             else
             {
-                // we need the positions to be leveled up 
-                if (prepare && !upInProgress)
+                if(level==6)
+                {
+                    // we only need to fold down                    
+                    // set level to 5 to get the correct target positions
+                    UpdateMesh(meshes[6]);
+                }
+
+                if (prepare && !upInProgress) // we need the positions to be leveled up 
                 {
                     level = Mathf.Max(1, level - 1);
                     Level();
@@ -414,6 +449,7 @@ public class createST : MonoBehaviour
                     FoldUp(true);
                 }
 
+                
                 FoldDown();
             }
         }
@@ -428,9 +464,8 @@ public class createST : MonoBehaviour
     {
         m.Clear();
         m.vertices = ms.vertices;
+        m.colors32 = ms.colors32;        
         m.triangles = ms.triangles;
-        m.colors32 = ms.colors32;
-        //Debug.Log("Level: " + level + " Number of vertices: " + ms.vertices.Length);
-        //Debug.Log("Number of triangles: " + ms.triangles.Length);
+        //m.RecalculateBounds();        
     }
 }

@@ -417,7 +417,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   level: 0
-  maxLevel: 5
+  maxLevel: 6
   speed: 1
 --- !u!1 &243042891
 GameObject:

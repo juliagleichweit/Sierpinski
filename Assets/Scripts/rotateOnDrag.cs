@@ -27,12 +27,12 @@ public class rotateOnDrag : MonoBehaviour
     private float velY = 0.0F;
     private float velZ = 0.0F;
     private Vector3 position = Vector3.zero;
-    private Camera camera;
+    private Camera _camera;
 
     // Start is called before the first frame
     void Start()
     {
-        camera = GetComponent<Camera>();
+        _camera = GetComponent<Camera>();
         Distance = Mathf.Clamp(Distance, DistanceMin, DistanceMax);
         startingDistance = Distance;
         Reset();
@@ -85,8 +85,8 @@ public class rotateOnDrag : MonoBehaviour
         Vector3 direction = new Vector3(0, 0, -distance); 
         Quaternion rotation = Quaternion.Euler(rotationX, rotationY, 0);
 
-        if(camera.orthographic)                             
-            camera.orthographicSize = distance;
+        if(_camera.orthographic)                             
+            _camera.orthographicSize = distance;
               
         return TargetLookAt.position + (rotation * direction);
     }

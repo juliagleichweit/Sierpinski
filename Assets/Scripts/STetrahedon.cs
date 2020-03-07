@@ -112,6 +112,20 @@ public class STetrahedon
         return m;
     }
 
+    /*
+     * Creates the triangle front including the inner folding triangles. First the top,right, left sub triangles
+     * and then the inner folding triangles
+     * 
+     * @param vertices - reference to the mesh vertice array
+     * @param idx - current starting index for the triangle side
+     * @param top - triangle head
+     * @param right - right bottom
+     * @param left - left bottom
+     * @param top_right - midpoint between head and  right (for inner triangle)
+     * @param top_left - midpoint between head and left ( for inner triangle)
+     * @param bottom_frt - midpoint between left and right ( for inner triangle)
+     * @param center - center of the three inner triangles
+     */
     private void CreateTriangleSide(Vector3[] vertices, int idx, Vector3 top, Vector3 right, Vector3 left, Vector3 top_right, Vector3 top_left, Vector3 bottom_frt, Vector3 center)
     {
         vertices[idx++] = top; vertices[idx++] = top_right; vertices[idx++] = top_left;  // top front 
@@ -123,6 +137,10 @@ public class STetrahedon
         vertices[idx++] = bottom_frt; vertices[idx++] = top_left; vertices[idx++] = center;  // left front         
     }
 
+    /*
+     * Creates the mesh based on the number of centers.
+     * Triangles are accordingly colored.
+     */
     public Mesh CreateMesh()
     {
         if (centers.Count == 0)
@@ -132,13 +150,12 @@ public class STetrahedon
         var vert_count = 72 * centers.Count;
 
         Vector3[] _vertices = new Vector3[vert_count];
-        Color32[] _colors32 = new Color32[_vertices.Length];
+        Color32[] _colors32 = new Color32[vert_count];
 
         float s = Size;
         int i = 0;
 
-        var targetPos = new List<Vector3>();
-        //Debug.Log("Number of centers: " + centers.Count);
+        var targetPos = new List<Vector3>(); 
 
         for (int k = 0; k < centers.Count; k++)
         {
@@ -194,15 +211,15 @@ public class STetrahedon
             CreateTriangleSide(_vertices, i, v3, v1, v2, bt_rt, bt_lft, bt_frt, center_bt);
             i += 18;
 
-            // add target positions for level to level-1
+            // add target positions for folding from level to level-1 
             targetPos.Add(center_bt);
             targetPos.Add(center_lft);
             targetPos.Add(center_rt);
             targetPos.Add(center_ft);
-
+            
         }
-
-        int[] _triangles = new int[_vertices.Length];
+        
+        int[] _triangles = new int[vert_count];
 
         for (int n = 0; n < _triangles.Length; n++)
         {
