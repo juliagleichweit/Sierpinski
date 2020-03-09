@@ -19,21 +19,37 @@ public class STetrahedon
     private List<Vector3> centers = new List<Vector3>();
     private List<Color32> colors = new List<Color32> {Color.yellow, Color.red, Color.blue, Color.green};
 
+    // positions for folding 
     private static List<List<Vector3>> targetPositions = new List<List<Vector3>>();
 
+    /*
+     * Return a list of folding target positions.
+     * To fold from level to level+1 you need targetPositions(level+3)
+     * level..0  - target positions to fold from level 0 to 1
+     * level..1  - target positions to fold from level 1 to 0
+     */
     public List<List<Vector3>> getTargetsPos()
     {
         return targetPositions;
     }
 
-    public STetrahedon Subdivide(int aCount)
+    /*
+     * Subdivides the center positions to toLevel-1.
+     * Level 1 is the folded up base tetraeder.
+     */
+    public STetrahedon Subdivide(int toLevel)
     {
-        var res = this;
-        for (int i = 0; i < aCount - 1; i++)
+        var res = this;        
+        for (int i = 0; i < toLevel - 1; i++)
             res = res.Subdivide();
         return res;
     }
 
+    /*
+     * Creates 4 new center positions based on the existing tetraeder center. 
+     * The new centers are positioned half-way top/left/right/back to the original centers creating
+     * the new center positions of the new 4 tetraeders. 
+     */
     public STetrahedon Subdivide()
     {
         var result = new STetrahedon();
@@ -52,6 +68,9 @@ public class STetrahedon
         return result;
     }
 
+    /*
+     * Generates the vertices of the base tetrahedron (4 triangles).
+     */
     public Mesh CreateBaseMesh()
     {
         Vector3[] _vertices = new Vector3[12];
@@ -127,14 +146,14 @@ public class STetrahedon
      * @param center - center of the three inner triangles
      */
     private void CreateTriangleSide(Vector3[] vertices, int idx, Vector3 top, Vector3 right, Vector3 left, Vector3 top_right, Vector3 top_left, Vector3 bottom_frt, Vector3 center)
-    {
+    {     
         vertices[idx++] = top; vertices[idx++] = top_right; vertices[idx++] = top_left;  // top front 
         vertices[idx++] = top_right; vertices[idx++] = right; vertices[idx++] = bottom_frt;  // right front 
         vertices[idx++] = top_left; vertices[idx++] = bottom_frt; vertices[idx++] = left;  // left front 
         // inner triangles
         vertices[idx++] = top_left; vertices[idx++] = top_right; vertices[idx++] = center;  // top inner         
         vertices[idx++] = top_right; vertices[idx++] = bottom_frt; vertices[idx++] = center;  // right inner         
-        vertices[idx++] = bottom_frt; vertices[idx++] = top_left; vertices[idx++] = center;  // left front         
+        vertices[idx++] = bottom_frt; vertices[idx++] = top_left; vertices[idx++] = center;  // left front               
     }
 
     /*
@@ -154,7 +173,7 @@ public class STetrahedon
 
         float s = Size;
         int i = 0;
-
+        
         var targetPos = new List<Vector3>(); 
 
         for (int k = 0; k < centers.Count; k++)
@@ -167,7 +186,6 @@ public class STetrahedon
             var v3 = c + new Vector3(0, -f1_3 * s, s8_9 * s);               // top
 
             //folding triangle vertices
-            //var bt_top = _vertices[i - 1];
             var bt_rt = (v3 + v1) / 2;
             var bt_lft = (v3 + v2) / 2;
             var bt_frt = (v1 + v2) / 2;
@@ -212,18 +230,20 @@ public class STetrahedon
             i += 18;
 
             // add target positions for folding from level to level-1 
+            // to 
             targetPos.Add(center_bt);
             targetPos.Add(center_lft);
             targetPos.Add(center_rt);
             targetPos.Add(center_ft);
             
         }
-        
-        int[] _triangles = new int[vert_count];
 
-        for (int n = 0; n < _triangles.Length; n++)
+        int[] _triangles = new int[vert_count];
+       // List<int> _triangles = new List<int>();
+
+        for (int n = 0; n < vert_count; n++)
         {
-            _triangles[n] = n;
+            _triangles[n] = n; 
         }
 
         // targetpositions are collected for each level (in order bottom, front, left, right)
@@ -232,10 +252,11 @@ public class STetrahedon
         var m = new Mesh
         {
             vertices = _vertices,
-            triangles = _triangles,
-            colors32 = _colors32
+            colors32 = _colors32,
+            indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 // to support meshes over 65k vertices
         };
 
+        m.SetIndices(_triangles, MeshTopology.Triangles, 0); 
         return m;
     }
 }

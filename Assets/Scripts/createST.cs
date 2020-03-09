@@ -1,14 +1,13 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
+using UnityEngine; 
 
 public class createST : MonoBehaviour
 {
     private STetrahedon sierp;
     private Mesh m;
     public int level = 0;
-    public int maxLevel = 6;
+    public int maxLevel = 8;
 
     // Angular speed in radians per sec.
     public float speed = 1.0f;
@@ -52,11 +51,14 @@ public class createST : MonoBehaviour
         }
     }
 
-
+    /*
+     * Sets the new folding speed
+     */
     public void Speed(float newSpeed)
     {
         speed = newSpeed;
     }
+    
 
     public void PauseResumeFolding()
     {
@@ -65,7 +67,7 @@ public class createST : MonoBehaviour
     }
 
     /*
-     * Implements the stop functionality and displays the base triangle
+     * Implements the stop functionality and displays the base tetrahedron (4 triangles).
      **/
     public void JumpToBase()
     {
@@ -74,6 +76,10 @@ public class createST : MonoBehaviour
         Level();
     }
 
+    /*
+   * Prepare folding operation to level+1.
+   * Subsequent folding up calls are ignored.
+   */
     public void InitFoldUp()
     {
         if (lerpUp)
@@ -91,6 +97,10 @@ public class createST : MonoBehaviour
         }
     }
 
+    /*
+     * Prepare folding operation to level-1.
+     * Subsequent folding down calls are ignored.
+     */
     public void InitFoldDown()
     {
         if (lerpDown)
@@ -127,29 +137,15 @@ public class createST : MonoBehaviour
     {
 
         if (meshes.Count > level)
-        {
-            if (level == 6)
-            {
-                SimulateLevel6();
-            }
-            else
-            {
-                UpdateMesh(meshes[level]);
-            }
+        {        
+            UpdateMesh(meshes[level]);            
         }
         else
         {
             var mesh = sierp.Subdivide(level).CreateMesh();
             meshes.Add(mesh);
-            if (level == 6)
-            {
-                SimulateLevel6();
-            }
-            else
-            {
-                UpdateMesh(mesh);
-            }
-
+           
+                UpdateMesh(mesh);           
         }
     }
 
@@ -182,8 +178,8 @@ public class createST : MonoBehaviour
     }
 
     /*
-     * Subdivide mesh to a coarser level until base mesh is reached
-     * Cancels all pending fold operations
+     * Subdivide mesh to a coarser level until base mesh is reached.
+     * Cancels all pending fold operations.
      */
     public void LevelDown()
     {
@@ -351,6 +347,7 @@ public class createST : MonoBehaviour
 
     }
 
+    // color transition between folding up and down
     private Color32[] colorUp = { Color.yellow, Color.blue, Color.green, Color.yellow, Color.green, Color.red, Color.yellow, Color.red, Color.blue, Color.red, Color.blue, Color.green };
     private Color32[] colorDown = { Color.red, Color.red, Color.red, Color.blue, Color.blue, Color.blue, Color.green, Color.green, Color.green, Color.yellow, Color.yellow, Color.yellow };
     
@@ -393,10 +390,9 @@ public class createST : MonoBehaviour
     }
 
     /*
-     * Handles the folding up and down procedures
-     * To allow down-folding the mesh to the desired level it has to 
-     * be displayed at this level already folded up. Otherwise the mesh
-     * does not have the needed vertices.
+     * Handles the folding up and down procedures. 
+     * To allow down-folding to level-1 the mesh has to be displayed at level already folded up. 
+     * Otherwise the mesh does not have the needed vertices.
      * Then it gets folded down again. 
      */
     private void Fold()
@@ -466,16 +462,16 @@ public class createST : MonoBehaviour
     }
 
 
-
     /*
      * Clears the display mesh und updates it with the data provided by ms
      */
     void UpdateMesh(Mesh ms)
     {
         m.Clear();
+        m.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;  // to support meshes over 65k vertices       
         m.vertices = ms.vertices;
         m.colors32 = ms.colors32;
-        m.triangles = ms.triangles;
-        //m.RecalculateBounds();        
+        m.SetIndices(ms.triangles, MeshTopology.Triangles, 0);
+        //m.RecalculateNormals();
     }
 }
