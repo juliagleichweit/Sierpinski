@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class STetrahedon
+public class STetrahedron
 {
     // H = 4/3 *s 
     // a = 2 * sqrt(2/3)
@@ -37,7 +37,7 @@ public class STetrahedon
      * Subdivides the center positions to toLevel-1.
      * Level 1 is the folded up base tetraeder.
      */
-    public STetrahedon Subdivide(int toLevel)
+    public STetrahedron Subdivide(int toLevel)
     {
         var res = this;        
         for (int i = 0; i < toLevel - 1; i++)
@@ -50,9 +50,9 @@ public class STetrahedon
      * The new centers are positioned half-way top/left/right/back to the original centers creating
      * the new center positions of the new 4 tetraeders. 
      */
-    public STetrahedon Subdivide()
+    public STetrahedron Subdivide()
     {
-        var result = new STetrahedon();
+        var result = new STetrahedron();
         float s = result.Size = Size * 0.5f;
 
         if (centers.Count == 0)

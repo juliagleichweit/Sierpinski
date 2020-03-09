@@ -4,13 +4,13 @@ using UnityEngine;
 
 public class createST : MonoBehaviour
 {
-    private STetrahedon sierp;
+    private STetrahedron sierp;
     private Mesh m;
     public int level = 0;
     public int maxLevel = 8;
 
     // Angular speed in radians per sec.
-    public float speed = 1.0f;
+    public float speed = 0.6f;
 
     private List<Mesh> meshes = new List<Mesh>();
 
@@ -21,6 +21,7 @@ public class createST : MonoBehaviour
     private bool prepare = false;
     private bool upInProgress = false;
     private bool lvl2to1 = false;
+    public bool animateTillEnd = false;
 
     // indices for the targetpositions
     private int[] fdDwnTargetIdx = { 3, 3, 3, 1, 1, 1, 2, 2, 2, 0, 0, 0 };
@@ -35,7 +36,7 @@ public class createST : MonoBehaviour
         MeshFilter mf = GetComponent<MeshFilter>();
         m = mf.mesh;
 
-        sierp = new STetrahedon();
+        sierp = new STetrahedron();
         var mesh = sierp.CreateBaseMesh();
         meshes.Add(mesh);
         UpdateMesh(mesh);
@@ -49,6 +50,14 @@ public class createST : MonoBehaviour
         {
             Fold();
         }
+    }
+
+    /*
+     * Change if folding animation shall be shown until maxLevel. 
+     * Default false. 
+     */
+    public void ChangeAnimateTillEnd() {
+        animateTillEnd = !animateTillEnd;
     }
 
     /*
@@ -221,8 +230,10 @@ public class createST : MonoBehaviour
                 {
                     ResetLerpBools();
                     level = 1;
-
                     Level();
+
+                    if(animateTillEnd)
+                        InitFoldUp();
                     return;
                 }
             }
@@ -301,6 +312,8 @@ public class createST : MonoBehaviour
                     level += 1; 
                     Level();
 
+                    if(animateTillEnd)
+                        InitFoldUp();
                     return;
                 }
             }
@@ -338,6 +351,9 @@ public class createST : MonoBehaviour
                 lvl2to1 = false;
                 lerpBy = 0f;
                 Level();
+
+                if(animateTillEnd)
+                    InitFoldDown();
                 return;
             }
         }
@@ -435,14 +451,7 @@ public class createST : MonoBehaviour
                 FoldBaseDown();
             }
             else
-            {
-                if (level == 6)
-                {
-                    // we only need to fold down                    
-                    // set level to 5 to get the correct target positions
-                    UpdateMesh(meshes[6]);
-                }
-
+            {               
                 if (prepare && !upInProgress) // we need the positions to be leveled up 
                 {
                     level = Mathf.Max(1, level - 1);
@@ -454,7 +463,6 @@ public class createST : MonoBehaviour
                     FoldUp(true);
                     lerpBy = 0f;
                 }
-
 
                 FoldDown();
             }
