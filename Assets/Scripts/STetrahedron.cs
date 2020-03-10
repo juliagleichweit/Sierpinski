@@ -4,15 +4,15 @@ using UnityEngine;
 
 public class STetrahedron
 {
-    // H = 4/3 *s 
-    // a = 2 * sqrt(2/3)
-    // h = sqrt(2)
+    // H = 4/3 *s 			...	pyramid height (simplifies some equations instead of just using s)
+    // a = 2 * sqrt(2/3)	... triangle side length
+    // h = sqrt(2)			... triangle height
 
     static float s8_9 = Mathf.Sqrt(8f / 9f);    // 2/3 * sqrt(2) => 2/3 * height of triangle 
     static float s2_9 = Mathf.Sqrt(2f / 9f);    // 1/3 * sqrt(2) => 1/3 * height of triangle
     static float s2_3 = Mathf.Sqrt(2f / 3f);    // half length of triangle side    
     static float f1_3 = 1f / 3f;                // distance center to bottom
-    static float fs4_3 = (4f * Mathf.Sqrt(2f)) / 3f;                // triangle height 
+    static float fs4_3 = (4f * Mathf.Sqrt(2f)) / 3f;                // 4/3 * triangle height 
     static float a = 2 * Mathf.Sqrt(2f / 3f);   // triangle side length
     public float Size = 3;
 
